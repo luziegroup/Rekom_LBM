@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Sidebar from './components/Sidebar';
 
 interface Candidate {
   id: string;
@@ -23,6 +24,7 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Candidate[] | null>(null);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   async function runSearch(searchText: string) {
     if (!searchText.trim()) return;
@@ -44,33 +46,22 @@ export default function Home() {
     }
   }
 
+  async function addToShortlist(candidateId: string) {
+    try {
+      await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidate_id: candidateId }),
+      });
+      setAddedIds((prev) => new Set(prev).add(candidateId));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <div className="app">
-      {/* SIDEBAR */}
-      <aside className="sidebar">
-        <div className="logo">
-          <div className="logo-mark"></div>
-          <div className="logo-text">Talenta</div>
-        </div>
-
-        <div className="workspace-switcher">
-          <div className="name">Workspace Rekrutmen Anda ▾</div>
-          <div className="sub">Workspace default Anda</div>
-        </div>
-
-        <nav className="main-nav">
-          <a className="nav-item">Dasbor</a>
-          <a className="nav-item">Workspace</a>
-          <a className="nav-item">Daftar Pilihan</a>
-          <a className="nav-item">Kirim Email</a>
-          <a className="nav-item">Permintaan WhatsApp</a>
-          <a className="nav-item">Agen Talenta</a>
-        </nav>
-
-        <button className="new-search-btn" onClick={() => { setQuery(''); setResults(null); }}>
-          + Pencarian AI Baru
-        </button>
-      </aside>
+      <Sidebar />
 
       {/* MAIN */}
       <div className="main">
@@ -122,11 +113,30 @@ export default function Home() {
               )}
               {results.map((c) => (
                 <div className="result-card" key={c.id}>
-                  <div className="name">{c.full_name || 'Tanpa nama'}</div>
-                  <div className="meta">
-                    {c.current_title || '-'} · {c.location || '-'} · {c.years_experience ?? '-'} tahun pengalaman
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div className="name">{c.full_name || 'Tanpa nama'}</div>
+                      <div className="meta">
+                        {c.current_title || '-'} · {c.location || '-'} · {c.years_experience ?? '-'} tahun pengalaman
+                      </div>
+                      {c.summary && <div className="summary">{c.summary}</div>}
+                    </div>
+                    <button
+                      className="filter-chip"
+                      style={{ whiteSpace: 'nowrap' }}
+                      disabled={addedIds.has(c.id)}
+                      onClick={() => addToShortlist(c.id)}
+                    >
+                      {addedIds.has(c.id) ? '✓ Ditambahkan' : '+ Daftar Pilihan'}
+                    </button>
                   </div>
-                  {c.summary && <div className="summary">{c.summary}</div>}
                 </div>
               ))}
             </div>
